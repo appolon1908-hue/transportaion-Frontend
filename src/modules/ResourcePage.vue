@@ -8,10 +8,14 @@ const props = defineProps<{
   endpoint: string
 }>()
 
+type Row = Record<string, unknown>
+
 const query = useQuery({
   queryKey: computed(() => [props.endpoint]),
-  queryFn: () => api<unknown[]>(props.endpoint),
+  queryFn: () => api<Row[]>(props.endpoint),
 })
+
+const firstRow = computed<Row>(() => query.data.value?.[0] ?? {})
 
 const errorMessage = computed(() => {
   const error = query.error.value
@@ -45,13 +49,13 @@ const errorMessage = computed(() => {
         <table>
           <thead>
             <tr>
-              <th v-for="key in Object.keys(query.data.value?.[0] ?? {})" :key="key">{{ key }}</th>
+              <th v-for="key in Object.keys(firstRow)" :key="key">{{ key }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(item, index) in query.data.value" :key="index">
-              <td v-for="key in Object.keys(item as Record<string, unknown>)" :key="key">
-                {{ (item as Record<string, unknown>)[key] }}
+              <td v-for="key in Object.keys(item)" :key="key">
+                {{ item[key] }}
               </td>
             </tr>
           </tbody>
