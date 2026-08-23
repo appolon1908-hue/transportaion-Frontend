@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardPage from '../modules/DashboardPage.vue'
 import ResourcePage from '../modules/ResourcePage.vue'
+import TrackingPage from '../modules/TrackingPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,7 +13,7 @@ const router = createRouter({
     { path: '/quotes', component: ResourcePage, props: { title: 'Quotes', endpoint: '/api/v1/quotes' } },
     { path: '/shipments', component: ResourcePage, props: { title: 'Shipments', endpoint: '/api/v1/shipments' } },
     { path: '/loads', component: ResourcePage, props: { title: 'Loads', endpoint: '/api/v1/loads' } },
-    { path: '/tracking', component: ResourcePage, props: { title: 'Tracking', endpoint: '/api/v1/operations/exceptions' } },
+    { path: '/tracking', component: TrackingPage },
     { path: '/invoices', component: ResourcePage, props: { title: 'Invoices', endpoint: '/api/v1/invoices' } },
     { path: '/settlements', component: ResourcePage, props: { title: 'Carrier Settlements', endpoint: '/api/v1/carrier-settlements' } },
     { path: '/claims', component: ResourcePage, props: { title: 'Claims', endpoint: '/api/v1/claims' } },
