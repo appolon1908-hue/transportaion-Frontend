@@ -1,0 +1,105 @@
+name: portal-shell-ci
+
+on:
+  pull_request:
+    paths:
+      - "src/production/**"
+      - "index.production.html"
+      - "vite.production.config.ts"
+      - "tsconfig.production.json"
+      - "tsconfig.portal.json"
+      - ".github/workflows/portal-shell-ci.yml"
+  push:
+    branches:
+      - "fe/portal-shell-authz-api-v2"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-shell-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-build-and-security-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_API_BASE_URL: https://api.codestra.co/api/v1
+      VITE_OIDC_ISSUER: https://auth.codestra.co/realms/codestra
+      VITE_OIDC_CLIENT_ID: freight-platform-web
+      VITE_OIDC_SCOPE: openid profile email offline_access
+      VITE_OIDC_REDIRECT_URI: https://freight.codestra.co/auth/callback
+      VITE_OIDC_POST_LOGOUT_REDIRECT_URI: https://freight.codestra.co/login
+      VITE_AUTH_CONTEXT_PATH: /auth/me
+      VITE_ORGANIZATION_SELECTION_HEADER: X-Organization-ID
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Require repository-pinned build tools
+        run: |
+          npx --no-install vue-tsc --version
+          npx --no-install vite --version
+
+      - name: Strict typecheck production portal
+        run: npx --no-install vue-tsc --noEmit -p tsconfig.portal.json
+
+      - name: Build isolated production portal
+        run: npx --no-install vite build --config vite.production.config.ts
+
+      - name: Verify browser security invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number --fixed-string "localStorage" src/production/auth src/production/api
+          ! grep -R --line-number -Ei "client[_-]?secret|VITE_.*SECRET" src/production
+          grep -R --line-number --fixed-string "code_challenge_method" src/production/auth/oidc.ts
+          grep -R --line-number --fixed-string '"S256"' src/production/auth/oidc.ts
+          grep -R --line-number --fixed-string "nonce" src/production/auth/oidc.ts
+          grep -R --line-number --fixed-string "Idempotency-Key" src/production/api/client.ts
+          grep -R --line-number --fixed-string "If-Match" src/production/api/client.ts
+          grep -R --line-number --fixed-string "customer_portal.external_access" src/production
+          grep -R --line-number --fixed-string "carrier_portal.external_access" src/production
+          grep -q "Content-Security-Policy" index.production.html
+
+      - name: Verify no source maps or unhashed JavaScript assets
+        run: |
+          test -f dist-production/index.production.html
+          test -f dist-production/.vite/manifest.json
+          test -z "$(find dist-production -type f -name '*.map' -print -quit)"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          assets = list(Path('dist-production/assets').glob('*.js'))
+          assert assets, 'no JavaScript bundle emitted'
+          pattern = re.compile(r'.+-[A-Za-z0-9_-]{8,}\.js$')
+          assert all(pattern.fullmatch(item.name) for item in assets), [item.name for item in assets]
+          print(f'verified {len(assets)} hashed JavaScript assets')
+          PY
+
+      - name: Enforce compressed JavaScript budget
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import gzip
+
+          assets = list(Path('dist-production/assets').glob('*.js'))
+          sizes = {path.name: len(gzip.compress(path.read_bytes(), compresslevel=9)) for path in assets}
+          total = sum(sizes.values())
+          assert total <= 650_000, f'compressed JS total {total} exceeds 650 KB budget: {sizes}'
+          assert all(size <= 350_000 for size in sizes.values()), sizes
+          print({'compressed_total_bytes': total, 'assets': sizes})
+          PY
+
+      - name: Audit production dependency tree
+        run: npm audit --omit=dev --audit-level=high
