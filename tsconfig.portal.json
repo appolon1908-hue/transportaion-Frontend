@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@portal/*": ["src/portal/*"]
+    },
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": [
+    "src/portal/**/*.ts",
+    "src/portal/**/*.d.ts",
+    "src/portal/**/*.vue",
+    "vite.portal.config.ts"
+  ]
+}
