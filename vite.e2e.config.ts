@@ -1,6 +1,8 @@
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+
+const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   root: "e2e-app",
@@ -10,7 +12,7 @@ export default defineConfig({
     port: 4173,
     strictPort: true,
     fs: {
-      allow: [resolve(__dirname)],
+      allow: [projectRoot],
     },
   },
   define: {
