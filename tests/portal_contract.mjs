@@ -53,7 +53,8 @@ for (const path of requiredPaths) {
 assert.ok(client.includes('headers.set("Idempotency-Key"'), "mutations require idempotency support");
 assert.ok(client.includes('headers.set("If-Match"'), "mutations require optimistic concurrency support");
 assert.ok(client.includes('credentials: "omit"'), "bearer requests must not send ambient cookies");
-assert.ok(oidc.includes('code_challenge_method: "S256"'), "OIDC must use PKCE S256");
+assert.ok(oidc.includes('searchParams.set("code_challenge_method", "S256")'), "OIDC must use PKCE S256");
+assert.ok(oidc.includes('searchParams.set("nonce", nonce)'), "OIDC must bind a nonce to the authorization request");
 assert.ok(!client.includes("localStorage"), "tokens and API state must not use localStorage");
 assert.ok(!oidc.includes("client_secret"), "the browser client must remain public");
 
@@ -63,5 +64,5 @@ assert.equal(packageJson.scripts.e2e, "playwright test");
 console.log({
   workspaces: requiredViews.length,
   typedPaths: requiredPaths.length,
-  securityContracts: 7,
+  securityContracts: 8,
 });
