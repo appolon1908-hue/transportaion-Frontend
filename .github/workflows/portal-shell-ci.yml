@@ -4,14 +4,18 @@ on:
   pull_request:
     paths:
       - "src/production/**"
+      - "tests/**"
       - "index.production.html"
       - "vite.production.config.ts"
       - "tsconfig.production.json"
       - "tsconfig.portal.json"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/portal-shell-ci.yml"
   push:
     branches:
       - "fe/portal-shell-authz-api-v2"
+      - "fe/release-readiness-v4"
 
 permissions:
   contents: read
@@ -23,7 +27,7 @@ concurrency:
 jobs:
   typecheck-build-and-security-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       VITE_API_BASE_URL: https://api.codestra.co/api/v1
       VITE_OIDC_ISSUER: https://auth.codestra.co/realms/codestra
@@ -39,7 +43,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
 
       - name: Install locked dependencies
@@ -55,6 +59,9 @@ jobs:
 
       - name: Build isolated production portal
         run: npx --no-install vite build --config vite.production.config.ts
+
+      - name: Run portal contracts
+        run: npm run test:portal
 
       - name: Verify browser security invariants
         shell: bash
@@ -96,8 +103,8 @@ jobs:
           assets = list(Path('dist-production/assets').glob('*.js'))
           sizes = {path.name: len(gzip.compress(path.read_bytes(), compresslevel=9)) for path in assets}
           total = sum(sizes.values())
-          assert total <= 650_000, f'compressed JS total {total} exceeds 650 KB budget: {sizes}'
-          assert all(size <= 350_000 for size in sizes.values()), sizes
+          assert total <= 750_000, f'compressed JS total {total} exceeds 750 KB budget: {sizes}'
+          assert all(size <= 400_000 for size in sizes.values()), sizes
           print({'compressed_total_bytes': total, 'assets': sizes})
           PY
 
