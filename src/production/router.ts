@@ -1,11 +1,14 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { PortalKind } from "./types";
 import { useAuthStore } from "./auth/store";
+import AdminPortalView from "./views/AdminPortalView.vue";
+import CarrierPortalView from "./views/CarrierPortalView.vue";
+import CustomerPortalView from "./views/CustomerPortalView.vue";
 import DashboardView from "./views/DashboardView.vue";
 import LoginView from "./views/LoginView.vue";
 import MessageView from "./views/MessageView.vue";
 import OidcCallbackView from "./views/OidcCallbackView.vue";
-import PortalLandingView from "./views/PortalLandingView.vue";
+import OperationsPortalView from "./views/OperationsPortalView.vue";
 import SelectOrganizationView from "./views/SelectOrganizationView.vue";
 
 declare module "vue-router" {
@@ -51,19 +54,17 @@ const router = createRouter({
     {
       path: "/portal/admin",
       name: "admin-portal",
-      component: PortalLandingView,
-      props: { portal: "ADMIN" },
+      component: AdminPortalView,
       meta: {
         title: "Administration",
         portal: "ADMIN",
-        requiredPermissions: ["admin.users.manage"],
+        requiredPermissions: ["admin.identity.read"],
       },
     },
     {
       path: "/portal/operations",
       name: "operations-portal",
-      component: PortalLandingView,
-      props: { portal: "OPERATIONS" },
+      component: OperationsPortalView,
       meta: {
         title: "Transportation operations",
         portal: "OPERATIONS",
@@ -73,22 +74,22 @@ const router = createRouter({
     {
       path: "/portal/customer",
       name: "customer-portal",
-      component: PortalLandingView,
-      props: { portal: "CUSTOMER" },
+      component: CustomerPortalView,
       meta: {
         title: "Customer portal",
         portal: "CUSTOMER",
+        requiredPermissions: ["portal.customer"],
         requiredCapability: "customer_portal.external_access",
       },
     },
     {
       path: "/portal/carrier",
       name: "carrier-portal",
-      component: PortalLandingView,
-      props: { portal: "CARRIER" },
+      component: CarrierPortalView,
       meta: {
         title: "Carrier portal",
         portal: "CARRIER",
+        requiredPermissions: ["portal.carrier"],
         requiredCapability: "carrier_portal.external_access",
       },
     },
