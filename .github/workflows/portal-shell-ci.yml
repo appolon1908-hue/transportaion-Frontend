@@ -1,0 +1,128 @@
+name: portal-shell-ci
+
+on:
+  pull_request:
+    paths:
+      - "portal.html"
+      - "src/portal/**"
+      - "public/runtime-config.js"
+      - "vite.portal.config.ts"
+      - "tsconfig.portal.json"
+      - "deploy/frontend/**"
+      - "tests/portal_contract.mjs"
+      - ".github/workflows/portal-shell-ci.yml"
+  push:
+    branches:
+      - "fe/auth-portal-shell-v2"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-shell-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Type-check isolated portal project
+        run: npm exec vue-tsc -- --noEmit -p tsconfig.portal.json
+
+      - name: Run portal security and storage contracts
+        run: node tests/portal_contract.mjs
+
+      - name: Build production portal bundle
+        run: npm exec vite -- build --config vite.portal.config.ts
+
+      - name: Verify build outputs and reject embedded secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist-portal/portal.html
+          test -f dist-portal/.vite/manifest.json
+          test -f dist-portal/runtime-config.js
+          grep -Fq '__RUNTIME_REQUIRED__' dist-portal/runtime-config.js
+          if grep -RInE \
+            '(client[_-]?secret|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|Authorization:[[:space:]]*Bearer|Bearer[[:space:]]+[A-Za-z0-9._-]{20,})' \
+            dist-portal; then
+            echo "Potential browser-bundled credential detected" >&2
+            exit 1
+          fi
+
+      - name: Validate Nginx configuration
+        run: |
+          docker run --rm \
+            -v "$PWD/deploy/frontend/nginx.portal.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:alpine nginx -t
+
+      - name: Build runtime image
+        run: |
+          docker build \
+            --file deploy/frontend/Dockerfile.portal \
+            --build-arg NODE_IMAGE=node:22-alpine \
+            --build-arg NGINX_IMAGE=nginx:alpine \
+            --tag freight-platform-frontend:ci \
+            .
+
+      - name: Smoke-test non-root read-only runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id="$(docker run -d --rm \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=16m,mode=1777 \
+            --tmpfs /var/cache/nginx:rw,noexec,nosuid,size=16m,mode=1777 \
+            --tmpfs /var/run:rw,noexec,nosuid,size=4m,mode=1777 \
+            -e APP_ENVIRONMENT=test \
+            -e PUBLIC_API_BASE_URL=https://api.freight.example.com \
+            -e PORTAL_PUBLIC_ORIGIN=https://portal.freight.example.com \
+            -e OIDC_ISSUER=https://auth.example.com/realms/freight \
+            -e OIDC_CLIENT_ID=freight-portal \
+            -e OIDC_SCOPE='openid profile email' \
+            -p 127.0.0.1:18080:8080 \
+            freight-platform-frontend:ci)"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/health/live >/tmp/portal-health.json; then
+              break
+            fi
+            sleep 1
+          done
+          grep -Fq 'freight-platform-frontend' /tmp/portal-health.json
+          curl --fail --silent http://127.0.0.1:18080/runtime-config.js >/tmp/runtime-config.js
+          grep -Fq 'https://api.freight.example.com' /tmp/runtime-config.js
+          grep -Fq 'https://auth.example.com/realms/freight' /tmp/runtime-config.js
+          if grep -Eqi '(secret|password|private.?key)' /tmp/runtime-config.js; then
+            echo "Runtime config contains forbidden key material" >&2
+            exit 1
+          fi
+          test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "nginx"
+
+      - name: Reject unsafe runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if docker run --rm \
+            -e APP_ENVIRONMENT=production \
+            -e PUBLIC_API_BASE_URL=http://api.freight.example.com \
+            -e PORTAL_PUBLIC_ORIGIN=https://portal.freight.example.com/path \
+            -e OIDC_ISSUER=https://auth.example.com/realms/freight \
+            -e OIDC_CLIENT_ID=freight-portal \
+            freight-platform-frontend:ci; then
+            echo "Unsafe runtime configuration was accepted" >&2
+            exit 1
+          fi
