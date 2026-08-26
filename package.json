@@ -1,12 +1,15 @@
 {
   "name": "freight-platform-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:production": "vite build --config vite.production.config.ts",
+    "typecheck:production": "vue-tsc --noEmit -p tsconfig.portal.json",
     "test": "vitest run",
+    "test:portal": "node tests/portal_contract.mjs",
     "e2e": "playwright test"
   },
   "dependencies": {
