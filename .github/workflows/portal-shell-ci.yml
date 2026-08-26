@@ -5,8 +5,11 @@ on:
     paths:
       - "src/production/**"
       - "tests/**"
+      - "e2e-app/**"
       - "index.production.html"
       - "vite.production.config.ts"
+      - "vite.e2e.config.ts"
+      - "playwright.config.ts"
       - "tsconfig.production.json"
       - "tsconfig.portal.json"
       - "package.json"
@@ -27,7 +30,7 @@ concurrency:
 jobs:
   typecheck-build-and-security-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       VITE_API_BASE_URL: https://api.codestra.co/api/v1
       VITE_OIDC_ISSUER: https://auth.codestra.co/realms/codestra
@@ -53,6 +56,7 @@ jobs:
         run: |
           npx --no-install vue-tsc --version
           npx --no-install vite --version
+          npx --no-install playwright --version
 
       - name: Strict typecheck production portal
         run: npx --no-install vue-tsc --noEmit -p tsconfig.portal.json
@@ -107,6 +111,23 @@ jobs:
           assert all(size <= 400_000 for size in sizes.values()), sizes
           print({'compressed_total_bytes': total, 'assets': sizes})
           PY
+
+      - name: Install Chromium for browser contracts
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Run mocked OIDC portal browser workflows
+        run: npm run e2e
+
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-browser-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Audit production dependency tree
         run: npm audit --omit=dev --audit-level=high
