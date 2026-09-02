@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "repository_id": 1343761049,
+  "current_repository": "appolon1908-hue/transportaion-Frontend",
+  "rename_status": "PREPARED_NOT_RENAMED",
+  "source_authority": "CURRENT_REPOSITORY",
+  "application_role": "Freight brokerage and 3PL frontend",
+  "deployment_state": "NOT_DEPLOYED",
+  "active_deployment_consumers": [],
+  "server_checkout_remotes": [],
+  "runtime_image_digest": null,
+  "rollback_image_digest": null,
+  "runtime_evidence": "NOT_APPLICABLE_NOT_DEPLOYED",
+  "active_automation_consumer": ".github/workflows/repository-name-migration.yml",
+  "rules": {
+    "workflow_must_assert_current_repository": true,
+    "current_repository_required_before_cutover": true,
+    "target_repository_forbidden_before_verified_cutover": true,
+    "deployment_must_not_be_invented": true,
+    "runtime_digest_required_when_deployed": true,
+    "rollback_digest_required_when_deployed": true
+  }
+}
