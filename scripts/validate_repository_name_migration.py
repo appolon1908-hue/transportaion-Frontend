@@ -59,8 +59,11 @@ def validate() -> None:
         "target_repository_forbidden_in_automation_before_cutover",
         "same_repository_id_required_after_cutover",
         "historical_evidence_immutable",
+        "all_inventoried_integrations_require_post_rename_readback",
         "runtime_digest_must_remain_unchanged_when_deployed",
         "absent_runtime_digest_must_be_recorded_as_not_applicable",
+        "success_path_must_restore_freeze_state",
+        "rollback_path_must_restore_freeze_state",
     ):
         if policy.get(key) is not True:
             fail(f"required fail-closed migration policy is not true: {key}")
@@ -81,10 +84,15 @@ def validate() -> None:
     runbook = RUNBOOK.read_text(encoding="utf-8")
     for required in (
         "CURRENT_RUNTIME_STATE=SOURCE_ONLY_NOT_DEPLOYED",
+        "POST_RENAME_INTEGRATION_READBACK=PASS",
         "CURRENT_RUNTIME_STATE=DEPLOYED|NOT_DEPLOYED",
         "DEPLOYED_FRONTEND_IMAGE_DIGEST=<immutable-digest>|N/A",
         "RUNTIME_DIGEST_UNCHANGED=PASS|N/A",
-        "Do not fabricate runtime evidence.",
+        "MERGES_UNFROZEN=PASS",
+        "WORKFLOW_DISPATCH_UNFROZEN=PASS|N/A",
+        "ROLLBACK_UNFREEZE=PASS|N/A",
+        "Do not leave the repository frozen.",
+        "do not fabricate runtime evidence.",
         "WORKLOADS_RESTARTED=0",
         "IMAGES_REBUILT=0",
         "DATABASE_MIGRATIONS=0",
