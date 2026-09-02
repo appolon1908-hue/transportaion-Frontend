@@ -5,6 +5,8 @@
   "target_repository_after_cutover": "appolon1908-hue/freight-platform-frontend",
   "status": "PREPARED_NOT_RENAMED",
   "runtime_critical": true,
+  "current_runtime_state": "SOURCE_ONLY_NOT_DEPLOYED",
+  "runtime_digest_evidence": "REQUIRED_WHEN_DEPLOYED_OTHERWISE_NOT_APPLICABLE",
   "authority_role": "Freight brokerage and 3PL frontend",
   "account_authority": "appolon1908-hue/documentaions:repository-name-migration.v1.json",
   "policy": {
@@ -12,7 +14,8 @@
     "target_repository_forbidden_in_automation_before_cutover": true,
     "same_repository_id_required_after_cutover": true,
     "historical_evidence_immutable": true,
-    "runtime_digest_must_remain_unchanged": true,
+    "runtime_digest_must_remain_unchanged_when_deployed": true,
+    "absent_runtime_digest_must_be_recorded_as_not_applicable": true,
     "rename_authorizes_deployment": false
   }
 }
