@@ -7,6 +7,7 @@ TARGET_FULL_NAME=appolon1908-hue/freight-platform-frontend
 STATUS=PREPARED_NOT_RENAMED
 RUNTIME_CRITICAL=YES
 CURRENT_RUNTIME_STATE=SOURCE_ONLY_NOT_DEPLOYED
+SOURCE_AUTHORITY=config/repository-source-authority.v1.json
 ```
 
 ## Authority decision
@@ -17,14 +18,16 @@ The current full name remains operational until an authorized GitHub rename is c
 
 The current repository evidence describes source and documentation only; it does not prove a deployed frontend runtime. Runtime-critical means future deployment consumers must be protected during cutover. It does not permit an operator to invent an image digest that does not exist.
 
+[`config/repository-source-authority.v1.json`](config/repository-source-authority.v1.json) binds the source-only application to the current GitHub slug, records no active deployment or server checkout consumer, and identifies `.github/workflows/repository-name-migration.yml` as the active automation consumer. The workflow must continue asserting `appolon1908-hue/transportaion-Frontend` while the migration state is `PREPARED_NOT_RENAMED`.
+
 ## Required pre-cutover inventory
 
 Capture the default-branch SHA, visibility, protection and rulesets, CODEOWNERS, required checks, workflow and Environment inventory, reusable-workflow references, deploy-key fingerprints, webhooks and GitHub Apps, package and GHCR identities, badges, infrastructure and source-lock references, developer and server remotes, and the exact merge and dispatch state being frozen. Record names and fingerprints only; do not print secret values.
 
 Re-evaluate runtime state immediately before the rename:
 
-- when a reviewed staging or production deployment exists, record its exact immutable frontend image and rollback digests, then prove both remain unchanged during the metadata-only rename;
-- when no deployment exists, record `CURRENT_RUNTIME_STATE=NOT_DEPLOYED`, `DEPLOYED_FRONTEND_IMAGE_DIGEST=N/A`, and `RUNTIME_DIGEST_UNCHANGED=N/A`;
+- when a reviewed staging or production deployment exists, record its exact immutable running frontend image digest and its exact rollback image digest, then prove both remain unchanged during the metadata-only rename;
+- when no deployment exists, record `CURRENT_RUNTIME_STATE=NOT_DEPLOYED`, `DEPLOYED_FRONTEND_IMAGE_DIGEST=N/A`, `ROLLBACK_FRONTEND_IMAGE_DIGEST=N/A`, `RUNTIME_DIGEST_UNCHANGED=N/A`, and `ROLLBACK_DIGEST_UNCHANGED=N/A`;
 - do not fabricate runtime evidence.
 
 ## Controlled cutover
@@ -36,14 +39,14 @@ Re-evaluate runtime state immediately before the rename:
 5. Stop and roll back if any inventoried integration is missing, weakened, or unresolved.
 6. Update only mutable repository URLs, image-source labels, workflow references, badges, package metadata, server remotes, and deployment manifests. Preserve dated evidence and historical source locks exactly as captured.
 7. Verify frontend build, CI, package resolution, clone, fetch, push, release dry run, deployment preflight, and every downstream consumer.
-8. When a deployment exists, verify its running image digest is unchanged. When no deployment exists, retain an explicit `N/A` result instead of claiming runtime validation.
+8. When a deployment exists, verify both its running image digest and selected rollback image digest are unchanged. When no deployment exists, retain explicit `N/A` results instead of claiming runtime or rollback validation.
 9. Verify no freight operation, tender, dispatch, financial mutation, notification, external provider effect, or production traffic is activated.
 10. Rehearse rollback to the prior slug.
 11. After success or validated rollback, restore the exact recorded merge, release-dispatch, workflow-dispatch, and deployment-dispatch state. Do not leave the repository frozen.
 
 ## Rollback
 
-Rollback restores the prior slug when safe, restores mutable references and remote URLs from the checksum-bound pre-change packet, repeats the complete repository, Actions, checks, Environments, package, deploy-key, GitHub App, webhook, downstream-consumer, and runtime readback, verifies no freight capability changed, and then restores the recorded freeze state. A successful rollback must not leave normal repository operations disabled.
+Rollback restores the prior slug when safe, restores mutable references and remote URLs from the checksum-bound pre-change packet, repeats the complete repository, Actions, checks, Environments, package, deploy-key, GitHub App, webhook, downstream-consumer, running-image, rollback-image, and runtime readback, verifies no freight capability changed, and then restores the recorded freeze state. A successful rollback must not leave normal repository operations disabled.
 
 A metadata-only rename must produce:
 
@@ -61,7 +64,9 @@ DISPATCH_ENABLED=NO_CHANGE
 PRODUCTION_TRAFFIC_CHANGED=NO
 CURRENT_RUNTIME_STATE=DEPLOYED|NOT_DEPLOYED
 DEPLOYED_FRONTEND_IMAGE_DIGEST=<immutable-digest>|N/A
+ROLLBACK_FRONTEND_IMAGE_DIGEST=<immutable-digest>|N/A
 RUNTIME_DIGEST_UNCHANGED=PASS|N/A
+ROLLBACK_DIGEST_UNCHANGED=PASS|N/A
 MERGES_UNFROZEN=PASS
 RELEASE_DISPATCH_UNFROZEN=PASS|N/A
 WORKFLOW_DISPATCH_UNFROZEN=PASS|N/A
