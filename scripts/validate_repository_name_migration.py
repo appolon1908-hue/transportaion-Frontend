@@ -40,6 +40,8 @@ def validate() -> None:
         "target_repository_after_cutover": TARGET,
         "status": "PREPARED_NOT_RENAMED",
         "runtime_critical": True,
+        "current_runtime_state": "SOURCE_ONLY_NOT_DEPLOYED",
+        "runtime_digest_evidence": "REQUIRED_WHEN_DEPLOYED_OTHERWISE_NOT_APPLICABLE",
         "authority_role": "Freight brokerage and 3PL frontend",
         "account_authority": (
             "appolon1908-hue/documentaions:repository-name-migration.v1.json"
@@ -57,7 +59,8 @@ def validate() -> None:
         "target_repository_forbidden_in_automation_before_cutover",
         "same_repository_id_required_after_cutover",
         "historical_evidence_immutable",
-        "runtime_digest_must_remain_unchanged",
+        "runtime_digest_must_remain_unchanged_when_deployed",
+        "absent_runtime_digest_must_be_recorded_as_not_applicable",
     ):
         if policy.get(key) is not True:
             fail(f"required fail-closed migration policy is not true: {key}")
@@ -77,6 +80,11 @@ def validate() -> None:
 
     runbook = RUNBOOK.read_text(encoding="utf-8")
     for required in (
+        "CURRENT_RUNTIME_STATE=SOURCE_ONLY_NOT_DEPLOYED",
+        "CURRENT_RUNTIME_STATE=DEPLOYED|NOT_DEPLOYED",
+        "DEPLOYED_FRONTEND_IMAGE_DIGEST=<immutable-digest>|N/A",
+        "RUNTIME_DIGEST_UNCHANGED=PASS|N/A",
+        "Do not fabricate runtime evidence.",
         "WORKLOADS_RESTARTED=0",
         "IMAGES_REBUILT=0",
         "DATABASE_MIGRATIONS=0",
@@ -85,7 +93,7 @@ def validate() -> None:
         "PRODUCTION_TRAFFIC_CHANGED=NO",
     ):
         if required not in runbook:
-            fail(f"rename runbook is missing zero-change evidence: {required}")
+            fail(f"rename runbook is missing required evidence: {required}")
 
     # Before cutover the future target may appear only in the explicit authority
     # files. Other current documentation must continue to resolve the live slug.
