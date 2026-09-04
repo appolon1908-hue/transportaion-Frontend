@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Iterable
 
@@ -51,6 +52,27 @@ def run(
     completed = subprocess.run(argv, cwd=cwd, env=env, text=True, check=False, timeout=timeout)
     if completed.returncode != 0:
         fail(f"command failed with exit code {completed.returncode}: {' '.join(argv)}")
+
+
+def run_with_retries(
+    argv: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str] | None = None,
+    timeout: int = 900,
+    attempts: int = 3,
+) -> None:
+    """Retry transient network-backed checks but remain fail-closed."""
+    for attempt in range(1, attempts + 1):
+        try:
+            run(argv, cwd=cwd, env=env, timeout=timeout)
+            return
+        except ValidationError:
+            if attempt == attempts:
+                raise
+            delay = 15 * attempt
+            print(f"RETRYING_ATTEMPT={attempt + 1}/{attempts} AFTER_SECONDS={delay}", flush=True)
+            time.sleep(delay)
 
 
 def iter_files(root: Path) -> Iterable[Path]:
@@ -184,7 +206,13 @@ def run_node_project(directory: Path, manifest_path: Path, mode: str, branch: st
     for name in NODE_SCRIPTS:
         if has_script(manifest, name):
             run([*runner, name], cwd=directory, env=env, timeout=1800)
-    run(["npm", "audit", "--omit=dev", "--audit-level=critical"], cwd=directory, env=env, timeout=600)
+    run_with_retries(
+        ["npm", "audit", "--omit=dev", "--audit-level=critical"],
+        cwd=directory,
+        env=env,
+        timeout=600,
+        attempts=3,
+    )
 
 
 def requirement_file(directory: Path) -> Path | None:
